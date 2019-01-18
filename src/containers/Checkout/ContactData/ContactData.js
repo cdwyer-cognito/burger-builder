@@ -1,68 +1,193 @@
 import React, { Component } from 'react';
 import axios from '../../../axios-orders';
+import { connect } from 'react-redux';
 
 import Button from '../../../components/UI/Button/Button';
 import classes from './ContactData.css';
 import Spinner from '../../../components/UI/Spinner/Spinner';
+import Input from '../../../components/UI/Input/Input';
+import withErrorHandler from '../../../hoc/withErrorHandler/withErrorHandler';
+import * as actions from '../../../store/actions/index';
 
 class ContactData extends Component {
 
     state = {
-        name: '',
-        email: '',
-        address: {
-            street: '',
-            postcode: ''
-        },
-        loading: false
-
+        orderForm: {
+                name: {
+                    elementType: 'input',
+                    elementConfig: {
+                        type: 'text',
+                        placeholder: 'Name'
+                    },
+                    value: '',
+                    validation: {
+                        required: true,
+                    },
+                    valid: false,
+                    touched: false
+                },
+                email: {
+                    elementType: 'input',
+                    elementConfig: {
+                        type: 'text',
+                        placeholder: 'Email'
+                    },
+                    value: '',
+                    validation: {
+                        required: true,
+                    },
+                    valid: false,
+                    touched: false
+                },
+                address: {
+                    elementType: 'input',
+                    elementConfig: {
+                        type: 'text',
+                        placeholder: 'Address'
+                    },
+                    value: '',
+                    validation: {
+                        required: true,
+                    },
+                    valid: false,
+                    touched: false
+                },
+                postcode: {
+                    elementType: 'input',
+                    elementConfig: {
+                        type: 'text',
+                        placeholder: 'Postcode'
+                    },
+                    value: '',
+                    validation: {
+                        required: true,
+                        minLength: 5,
+                        maxLength: 7
+                    },
+                    valid: false,
+                    touched: false
+                },
+                country: {
+                    elementType: 'input',
+                    elementConfig: {
+                        type: 'text',
+                        placeholder: 'Country'
+                    },
+                    value: '',
+                    validation: {
+                        required: true,
+                    },
+                    valid: false,
+                    touched: false
+                },
+                deliveryMethod: {
+                    elementType: 'select',
+                    elementConfig: {
+                        options: [
+                            {value: 'fastest', displayValue: 'Fastest'},
+                            {value: 'cheapest', displayValue: 'Cheapest'},
+                        ]
+                    },
+                    value: 'fastest',
+                    validation: {},
+                    valid: true
+                }
+            },
+            formIsValid: false,
     }
 
     orderHandler = ( event ) => {
         event.preventDefault();
-        
-        this.setState({ loading: true });
+                
+        const formData = {};
 
-        console.log( this.props );
-
-        const order = {
-            ingredients: this.props.ingredients,
-            price: this.props.price,
-            customer: {
-                address: {
-                    country: "UK",
-                    postCode: "AB12 3CD",
-                    street: "An Address",
-                },
-                email: "test@test.com",
-                name: "Chris"
-            },
-            deliveryMethod: 'fastest'
+        for ( let formElementItentifier in this.state.orderForm ) {
+            formData[ formElementItentifier ] = this.state.orderForm[ formElementItentifier ];
         }
+        
+        const order = {
+            ingredients: this.props.ings,
+            price: this.props.price,
+            orderData: formData
+        }
+
+        this.props.orderBurger( order );
        
-        console.log('[ContactData.js] order obj', order);
-        axios.post('/orders.json', order)
-            .then( res => {
-                this.setState( { loading: false } );
-                this.props.history.push('/');
-            })
-            .catch( err => {
-                this.setState( { loading: false } );
-            });
+    }
+
+    checkValidity( value, rules ) {
+        let isValid = true;
+
+        if ( rules.required ) {
+            isValid = value.trim() !== '' && isValid;
+        }
+
+        if ( rules.minLength ) {
+            isValid = value.trim().length >= rules.minLength && isValid; 
+        }
+
+        if ( rules.maxLength ) {
+            isValid = value.trim().length <= rules.maxLength && isValid; 
+        }
+
+        return isValid;
+
+    }
+
+    inputChangedHandler = ( event, inputIdentifier ) => {
+        const updatedOrderForm = {
+            ...this.state.orderForm
+        };
+
+        const updatedFormElement = {
+            ...updatedOrderForm[ inputIdentifier ]
+        };
+
+        updatedFormElement.value = event.target.value;
+
+        updatedFormElement.valid = this.checkValidity( updatedFormElement.value, updatedFormElement.validation);
+        updatedFormElement.touched = true;
+        updatedOrderForm[ inputIdentifier ] = updatedFormElement;
+
+        let formIsValid = true;
+        for ( let inputIdentifier in updatedOrderForm ) {
+            formIsValid = updatedOrderForm[ inputIdentifier ].valid && formIsValid;
+        }
+
+        this.setState({ orderForm: updatedOrderForm, formIsValid: formIsValid });
     }
 
     render() {
+
+        const formElemetArray = [];
+
+        for( let key in this.state.orderForm ) {
+            formElemetArray.push( {
+                id: key,
+                config: this.state.orderForm[ key ]
+
+            });
+        }
+         
         let form = (
-            <form>
-                <input className={ classes.Input } type="text" name="name" placeholder="Your name" />
-                <input className={ classes.Input } type="text" name="email" placeholder="Your email" />
-                <input className={ classes.Input } type="text" name="street" placeholder="Your street" />
-                <input className={ classes.Input } type="text" name="postcode" placeholder="Your postcode" />
-                <Button btnType="Success" clicked={ this.orderHandler } >ORDER</Button>
+            
+            <form onSubmit={ this.orderHandler }>
+                { formElemetArray.map( formElement => ( 
+                    <Input 
+                        key={ formElement.id }
+                        elementType={ formElement.config.elementType}
+                        elementConfig={ formElement.config.elementConfig}
+                        value={ formElement.config.value }
+                        shouldValidate={ formElement.config.validation }
+                        invalid={ !formElement.config.valid }
+                        touched={ formElement.config.touched }
+                        changed={ ( event ) => this.inputChangedHandler(event, formElement.id) }/>
+                ))}
+                <Button btnType="Success" disabled={ !this.state.formIsValid }>ORDER</Button>
             </form>
         );
 
-        if ( this.state.loading ) {
+        if ( this.props.loading ) {
             form = <Spinner />;
         }
 
@@ -75,4 +200,18 @@ class ContactData extends Component {
     }
 }
 
-export default ContactData;
+const mapStateToProps = state => {
+    return {
+        ings: state.burgerBuilder.ingredients,
+        price: state.burgerBuilder.totalPrice,
+        loading: state.order.loading
+    }
+}
+
+const mapDispatchToProps = dispatch => {
+    return {
+        orderBurger: ( orderData ) => dispatch( actions.purchaseBurger( orderData ) )
+    }
+}   
+
+export default connect(mapStateToProps, mapDispatchToProps)(withErrorHandler(ContactData, axios));

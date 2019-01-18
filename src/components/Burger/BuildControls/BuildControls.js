@@ -3,17 +3,9 @@ import React from 'react';
 import classes from './BuildControls.css'
 import BuildControl from './BuildControl/BuildControl';
 
-// const controls = [
-//     { label: 'Bacon', type: 'bacon'},
-//     { label: 'Cheese', type: 'cheese'},
-//     { label: 'Chicken', type: 'chicken'},
-//     { label: 'Meat', type: 'meat'},
-//     { label: 'Salad', type: 'salad'}
-// ];
-
 const buildControls = ( props ) => {
 
-    const controls = Object.keys( props.ingredients).map( key => {
+    const controls = Object.keys( props.ingredients ).map( key => {
         return { label: key.charAt(0).toUpperCase() + key.substring(1), type: key.toLowerCase() }
     });
 
